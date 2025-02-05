@@ -6,12 +6,37 @@ from langchain.agents import initialize_agent, AgentType
 
 from dotenv import load_dotenv
 import os
-load_dotenv()
 
-# Load API key
+# Load environment variables
+load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
 
-# Define the AI agent
+# Streamlit Page Configuration
+st.set_page_config(page_title="AI Agents Groupchat", page_icon='🤖', layout="wide")
+
+# Custom Styling
+st.markdown("""
+    <style>
+        .big-title { font-size: 2.5rem; font-weight: bold; text-align: center; color: #4CAF50; }
+        .stButton>button { width: 100%; font-size: 1.2rem; padding: 10px; }
+        .stTextInput>div>div>input { font-size: 1.1rem; }
+    </style>
+""", unsafe_allow_html=True)
+
+# Title
+st.markdown('<p class="big-title">🤖 AI Agents Groupchat</p>', unsafe_allow_html=True)
+
+# Sidebar for user preferences
+with st.sidebar:
+    st.header("📌 Select Your Interests")
+    
+    tech_interests = ['Generative AI', 'Web Development', 'Machine Learning', 'Cybersecurity', 'Blockchain']
+    tech_int = st.selectbox("💻 Select Your Tech Interest", tech_interests)
+
+    st.markdown("---")  # Divider
+    st.info("🔍 Click 'Ask Agent' to explore the latest tech trends!", icon="ℹ️")
+
+# Define AI Agent
 tech_agent = ChatGroq(
     name="Technical Agent",
     api_key=groq_api_key,
@@ -19,34 +44,21 @@ tech_agent = ChatGroq(
 )
 
 # Define search tool
-search = DuckDuckGoSearchRun()
-tools = [search]
+search_tool = DuckDuckGoSearchRun()
+tools = [search_tool]
 
 # Define prompt template
-prompt_for_tech_agent = '''You are a cutting-edge AI assistant specializing in the latest technology trends. 
-You have access to real-time internet search capabilities and can retrieve up-to-date information about advancements in {tech_interests}. 
-You provide insightful, engaging, and well-structured responses in a conversational manner. 
-You analyze search results and summarize them concisely for the user, avoiding outdated or irrelevant data. 
-If no relevant search results are found, you rely on your existing knowledge and provide general trends. 
-You maintain a professional yet engaging tone, and you can also discuss the impact of these trends on various industries. 
-You ask follow-up questions to keep the conversation engaging and ensure the user gets the most relevant insights.'''
-
 prompt_template = PromptTemplate(
     input_variables=["tech_interests"],
-    template=prompt_for_tech_agent
+    template="""
+        You are a cutting-edge AI assistant specializing in the latest technology trends.
+        Your role is to provide up-to-date insights, analyze trends, and summarize findings for the user.
+        The user is interested in {tech_interests}.
+        Retrieve and summarize the latest updates from the internet and provide actionable insights.
+    """
 )
 
-# Streamlit UI
-st.set_page_config(page_title="Agents' GC", page_icon='🤖')
-st.title("AI Agents Groupchat")
-
-tech_interests = ['Generative AI', 'Web Development', 'Machine Learning']
-tech_int = st.selectbox(label="Select your Tech Interest", placeholder="Choose an option", options=tech_interests)
-
-# Format the prompt with user-selected interest
-formatted_prompt = prompt_template.format(tech_interests=tech_int)
-
-# Initialize the agent
+# Initialize agent
 tech_agent_with_search = initialize_agent(
     tools=tools,
     llm=tech_agent,
@@ -55,5 +67,14 @@ tech_agent_with_search = initialize_agent(
     handle_parsing_errors=True
 )
 
-# Run the agent with the formatted prompt
-response = tech_agent_with_search.invoke(formatted_prompt)
+# Button to trigger response
+if st.button("🚀 Ask Agent"):
+    st.subheader(f"📢 Exploring {tech_int} Trends...")
+    
+    # Generate response
+    formatted_prompt = prompt_template.format(tech_interests=tech_int)
+    response = tech_agent_with_search.invoke(formatted_prompt)
+
+    # Display the result in an expandable container
+    with st.expander("🔎 Click to view AI Insights", expanded=True):
+        st.write(response['output'])
